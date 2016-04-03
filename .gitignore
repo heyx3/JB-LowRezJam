@@ -3,3 +3,5 @@ Build/
 *.sln
 *.suo
 *.sdf
+*.csproj
+*.swatch

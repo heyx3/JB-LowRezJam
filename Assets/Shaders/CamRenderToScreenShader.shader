@@ -4,6 +4,9 @@
 	{
 		_MainTex ("Texture", 2D) = "white" {}
 		_Depth ("Screen Depth", Float) = 0.5
+
+        _DistanceToEnemy ("Distance to Enemy (lerp)", Float) = 1.0
+        _EnemyOverlay ("Enemy Overlay", 2D) = "white" {}
 	}
 	SubShader
 	{
@@ -30,7 +33,6 @@
 			{
 				float2 uv : TEXCOORD0;
 				float4 vertex : SV_POSITION;
-				//float2 depth : TEXCOORD1;
 			};
 
 			float _Depth;
@@ -41,12 +43,11 @@
 				o.vertex = sign(v.vertex);
 				o.vertex.z = _Depth;
 				o.uv = v.uv;
-				//COMPUTE_EYEDEPTH(o.depth);
 				return o;
 			}
 			
-			sampler2D _MainTex;
-			//sampler2D _CameraDepthTexture;
+			sampler2D _MainTex, _EnemyOverlay;
+            float _DistanceToEnemy;
 
 
 			float3 projectToLine(float3 pos, float3 pointOnLine, float3 lineDir)
@@ -60,29 +61,33 @@
 				float distToPlane = dot(toPos, planeNormal);
 				return pos - (distToPlane * planeNormal);
 			}
-			fixed4 toneMapper(float4 inCol)
+			fixed3 toneMapper(float3 inCol)
 			{
 				//Think of color as a 3D position in a cube from 0 to 1.
 
 				//This tonemapper projects every color onto a plane in that cube.
 				//const float3 planePoint = float3(0.5, 0.5, 0.5),
 				//			 planeNormal = normalize(float3(1.0, 2.0, 1.0));
-				//return float4(projectToPlane(inCol.rgb, planePoint, planeNormal),
-				//			  inCol.a);
+				//return projectToPlane(inCol.rgb, planePoint, planeNormal);
 
 				//This tonemapper projects every color onto a line through that cube.
-				const float3 linePoint = float3(1.0, 1.0, 1.0),
-							 lineDir = normalize(float3(1.0, 1.0, 1.0));
-				return float4(projectToLine(inCol.rgb, linePoint, lineDir),
-							  inCol.a);
+				//const float3 linePoint = float3(0.0, 0.0, 0.0),
+				//			 lineDir = normalize(float3(1.0, 1.0, 1.0));
+				//return projectToLine(inCol.rgb, linePoint, lineDir);
+
+                //This tonemapper just ups the contrast in the scene.
+                return smoothstep(0.0, 1.0, inCol);
 			}
 
 			fixed4 frag (v2f i) : SV_Target
 			{
-				//float depth = DECODE_EYEDEPTH(tex2D(_CameraDepthTexture, i.uv).r);
-				//return fixed4(depth, depth, depth, 1.0);
+                float4 gameRender = tex2D(_MainTex, i.uv),
+                       enemyTex = tex2D(_EnemyOverlay, i.uv);
+                float a = smoothstep(0.0, 1.0,
+                                     smoothstep(0.0, 1.0, enemyTex.a * (1.0 - _DistanceToEnemy)));
 
-				return (tex2D(_MainTex, i.uv));
+                float3 outCol = lerp(gameRender, enemyTex, a);
+                return fixed4(toneMapper(outCol), 1.0);
 			}
 			ENDCG
 		}

@@ -4,9 +4,10 @@ using UnityEngine;
 
 
 /// <summary>
-/// Generates a quad from {-1, -1} to {1, 1} into the object's MeshFilter on Awake().
+/// The quad that renders the game into the screen camera.
 /// </summary>
 [RequireComponent(typeof(MeshFilter))]
+[RequireComponent(typeof(MeshRenderer))]
 public class ScreenQuad : MonoBehaviour
 {
     private static Mesh m = null;
@@ -25,10 +26,17 @@ public class ScreenQuad : MonoBehaviour
     }
 
 
+	private MeshRenderer mr;
+
     void Awake()
     {
         InitMesh();
         GetComponent<MeshFilter>().sharedMesh = m;
-        Destroy(this);
+
+		mr = GetComponent<MeshRenderer>();
     }
+	void Update()
+	{
+		mr.sharedMaterial.SetFloat("_DistanceToEnemy", Enemy.Instance.DistToPlayerLerp);
+	}
 }
